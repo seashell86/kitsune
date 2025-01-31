@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-// --- Defaults ---
 const (
 	DEFAULT_TTL              = 60 * 60
 	DEFAULT_MAX_ENTRY_SIZE   = math.MaxInt64
@@ -421,18 +420,16 @@ func createHandler(cache *CacheSystem, defaultKeyspace string) http.Handler {
 	return mux
 }
 
-// ---------- main ----------
-
 func main() {
 	// Environment-based defaults
-	envLogLevel := getEnv("GIMME_LOG_LEVEL", "INFO")
-	envHost := getEnv("GIMME_HOST", "0.0.0.0")
-	envPort := getEnvInt("GIMME_PORT", 42069)
-	envMaxEntrySize := getEnvInt("GIMME_MAX_ENTRY_SIZE", DEFAULT_MAX_ENTRY_SIZE)
-	envMaxSize := getEnvInt("GIMME_MAX_SIZE", DEFAULT_MAX_SIZE)
-	envTTL := getEnvInt("GIMME_TTL", DEFAULT_TTL)
-	envCleanup := getEnvInt("GIMME_CLEANUP_INTERVAL", DEFAULT_CLEANUP_INTERVAL)
-	envDefaultKeyspace := getEnv("GIMME_DEFAULT_KEYSPACE", DEFAULT_KEYSPACE)
+	envLogLevel := getEnv("BOROPHYLL_LOG_LEVEL", "INFO")
+	envHost := getEnv("BOROPHYLL_HOST", "0.0.0.0")
+	envPort := getEnvInt("BOROPHYLL_PORT", 42069)
+	envMaxEntrySize := getEnvInt("BOROPHYLL_MAX_ENTRY_SIZE", DEFAULT_MAX_ENTRY_SIZE)
+	envMaxSize := getEnvInt("BOROPHYLL_MAX_SIZE", DEFAULT_MAX_SIZE)
+	envTTL := getEnvInt("BOROPHYLL_TTL", DEFAULT_TTL)
+	envCleanup := getEnvInt("BOROPHYLL_CLEANUP_INTERVAL", DEFAULT_CLEANUP_INTERVAL)
+	envDefaultKeyspace := getEnv("BOROPHYLL_DEFAULT_KEYSPACE", DEFAULT_KEYSPACE)
 
 	// Command-line flags
 	logLevelFlag := flag.String("log-level", envLogLevel, "Log level")

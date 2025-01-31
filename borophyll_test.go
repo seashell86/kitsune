@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -558,4 +559,140 @@ func httpPut(url, contentType string, body io.Reader) (*http.Response, error) {
 	}
 	req.Header.Set("Content-Type", contentType)
 	return http.DefaultClient.Do(req)
+}
+
+// BenchmarkSet measures the time it takes to perform a cache Set operation repeatedly.
+func BenchmarkSet(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 10*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("key-%d", i)
+		cache.Set("default", key, "some test data")
+	}
+}
+
+// BenchmarkGet measures the time it takes to perform a cache Get operation repeatedly.
+// In this benchmark, we set a single key once, then repeatedly Get that key.
+func BenchmarkGet(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 10*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	// Pre-insert one key
+	key := "some-key"
+	cache.Set("default", key, "some test data")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = cache.Get("default", key)
+	}
+}
+
+// BenchmarkGetMiss measures the time it takes to perform Get calls on a non-existent key.
+func BenchmarkGetMiss(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 10*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = cache.Get("default", "non-existent-key")
+	}
+}
+
+// BenchmarkSetGet measures the time to do a Set followed by a Get for each iteration.
+func BenchmarkSetGet(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 10*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := strconv.Itoa(i)
+		cache.Set("default", key, "some test data")
+		_ = cache.Get("default", key)
+	}
+}
+
+// BenchmarkDelete measures the time it takes to Delete keys that exist in the cache.
+func BenchmarkDelete(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 10*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	// Pre-insert some keys
+	for i := 0; i < 10000; i++ {
+		cache.Set("default", strconv.Itoa(i), "some test data")
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := strconv.Itoa(i % 10000) // re-delete from the same range
+		cache.Delete("default", key)
+	}
+}
+
+// BenchmarkParallelSetGet measures concurrent Set/Get operations.
+// It uses testing.B's RunParallel to simulate multiple goroutines doing work.
+func BenchmarkParallelSetGet(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 50*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			key := strconv.Itoa(i)
+			cache.Set("default", key, "parallel value")
+			_ = cache.Get("default", key)
+			i++
+		}
+	})
+}
+
+// BenchmarkEviction tests how the cache handles eviction under memory pressure.
+// We set a small max size to force frequent evictions.
+func BenchmarkEviction(b *testing.B) {
+	// Force a small maximum size so evictions happen often.
+	cache := NewCacheSystem(1024, 4*1024, 60, 1)
+	defer cache.Stop()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := strconv.Itoa(i)
+		cache.Set("default", key, "large-value-12345678") // ~20+ bytes per entry
+	}
+}
+
+// BenchmarkSetGetConcurrentBuckets measures parallel usage of multiple buckets.
+func BenchmarkSetGetConcurrentBuckets(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 50*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	b.RunParallel(func(pb *testing.PB) {
+		bucketID := 0
+		for pb.Next() {
+			bucket := fmt.Sprintf("bucket-%d", bucketID)
+			key := strconv.Itoa(bucketID)
+			cache.Set(bucket, key, "some parallel data")
+			_ = cache.Get(bucket, key)
+			bucketID++
+		}
+	})
+}
+
+// BenchmarkHighContentionSetGet demonstrates many goroutines using the same key.
+func BenchmarkHighContentionSetGet(b *testing.B) {
+	cache := NewCacheSystem(1024*1024, 50*1024*1024, 60, 10)
+	defer cache.Stop()
+
+	bucket := "contention-bucket"
+	key := "shared-key"
+	var mu sync.Mutex // to slightly mix the pattern
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			mu.Lock()
+			cache.Set(bucket, key, "contention-value")
+			_ = cache.Get(bucket, key)
+			mu.Unlock()
+		}
+	})
 }
