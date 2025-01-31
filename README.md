@@ -221,7 +221,7 @@ Sample benchmark results might look like:
 ```
 BenchmarkSet-8                     1000000    1234 ns/op    123 B/op    2 allocs/op
 BenchmarkGet-8                     2000000     567 ns/op     32 B/op    1 allocs/op
-BenchmarkParallelSetGet-8          500000    2345 ns/op    234 B/op    3 allocs/op
+BenchmarkParallelSetGet-8           500000    2345 ns/op    234 B/op    3 allocs/op
 // ... etc
 ```
 
