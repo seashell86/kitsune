@@ -1,5 +1,7 @@
 # Borophyll - A Lightweight In-Memory Cache Server in Go
 
+![Borophyll Logo](./cover.webp)
+
 Borophyll is a simple, in-memory caching server written in Go. It supports multiple buckets (namespaces), basic LRU eviction to enforce a maximum cache size, per-entry TTL (time-to-live), and a straightforward HTTP API for storing and retrieving values.
 
 ## Table of Contents
@@ -7,7 +9,6 @@ Borophyll is a simple, in-memory caching server written in Go. It supports multi
 1. [Features](#features)  
 2. [Installation](#installation)  
 3. [Configuration](#configuration)  
-   - [Environment Variables](#environment-variables)  
    - [Command-Line Flags](#command-line-flags)
 4. [HTTP Endpoints](#http-endpoints)
 5. [Usage Examples](#usage-examples)
@@ -27,6 +28,8 @@ Borophyll is a simple, in-memory caching server written in Go. It supports multi
 - **HTTP API**: Simple endpoints to GET, PUT, and DELETE cached items.
 - **Default Bucket**: Convenient single-bucket usage when you don't need multiple namespaces.
 - **Thread-Safe**: Built with concurrency in mind, safe to use in multi-threaded environments.
+- **Memory Pooling**: Uses sync.Pool to reduce GC pressure and improve performance.
+- **Lazy Expiration**: Expired items are removed both periodically and upon access.
 
 ---
 
@@ -53,32 +56,19 @@ Borophyll is a simple, in-memory caching server written in Go. It supports multi
 
 ## Configuration
 
-You can configure Borophyll using **environment variables** or **command-line flags** (flags take precedence over environment variables). Below are the available configuration options.
-
-### Environment Variables
-
-| Variable                     | Default Value      | Description                                                |
-|-----------------------------|--------------------|------------------------------------------------------------|
-| `BOROPHYLL_LOG_LEVEL`           | `INFO`             | Log level for the server.                                 |
-| `BOROPHYLL_HOST`                | `0.0.0.0`          | Host IP to bind.                                          |
-| `BOROPHYLL_PORT`                | `42069`            | Port to listen on.                                        |
-| `BOROPHYLL_MAX_ENTRY_SIZE`      | `9223372036854775807` (Max int64) | Maximum allowed size of any individual cache entry (in bytes).  |
-| `BOROPHYLL_MAX_SIZE`            | `9223372036854775807` (Max int64) | Maximum total size of the cache (in bytes).               |
-| `BOROPHYLL_TTL`                 | `3600` (1 hour)    | Default TTL for cache entries (in seconds).               |
-| `BOROPHYLL_CLEANUP_INTERVAL`    | `300` (5 minutes)  | Interval for cleaning up expired entries (in seconds).    |
-| `BOROPHYLL_DEFAULT_KEYSPACE`    | `__root__`         | Default bucket/namespace name if none is specified.        |
+You can configure Borophyll using command-line flags. Below are the available configuration options.
 
 ### Command-Line Flags
 
-| Flag                   | Default (Env Fallback) | Description                                   |
-|------------------------|------------------------|-----------------------------------------------|
-| `--host`               | `0.0.0.0`              | Host IP to bind.                              |
-| `--port`               | `42069`                | Port to listen on.                            |
-| `--max-entry-size`     | `9.22 * 10^18`           | Maximum size of a single cache entry (bytes). |
-| `--max-size`           | `9.22 * 10^18`           | Maximum total size of the cache (bytes).      |
-| `--ttl`                | `3600`                 | Default TTL for entries (in seconds).         |
-| `--cleanup-interval`   | `300`                  | Cleanup interval in seconds.                  |
-| `--default-keyspace`   | `__root__`             | Default bucket/namespace name.                |
+| Flag                   | Default        | Description                                   |
+|------------------------|----------------|-----------------------------------------------|
+| `--host`               | `0.0.0.0`      | Host IP to bind.                              |
+| `--port`               | `42069`        | Port to listen on.                            |
+| `--max-entry-size`     | `9.22 * 10^18` | Maximum size of a single cache entry (bytes). |
+| `--max-size`           | `9.22 * 10^18` | Maximum total size of the cache (bytes).      |
+| `--ttl`                | `3600`         | Default TTL for entries (in seconds).         |
+| `--cleanup-interval`   | `300`          | Cleanup interval in seconds.                  |
+| `--default-keyspace`   | `__root__`     | Default bucket/namespace name.                |
 
 > **Note**: If both an environment variable and a command-line flag are provided for a setting, **the flag value** is used.
 
@@ -191,41 +181,54 @@ go build -o borophyll main.go
 ./borophyll
 ```
 
-You can override default settings using flags or environment variables. For instance:
+You can override default settings using flags:
 
 ```bash
-# Using flags
 ./borophyll --host 127.0.0.1 --port 8080 --ttl 120 --cleanup-interval 30
-
-# Using environment variables
-export BOROPHYLL_HOST=127.0.0.1
-export BOROPHYLL_PORT=8080
-export BOROPHYLL_TTL=120
-export BOROPHYLL_CLEANUP_INTERVAL=30
-./borophyll
 ```
 
 ---
 
 ## Testing and Benchmarks
 
-An accompanying Go test file includes both unit tests and benchmarks to evaluate performance and correctness.
+The project includes comprehensive tests and benchmarks in `borophyll_test.go`. The test suite covers:
 
-- **Run all tests**:
+- Basic cache operations (Set/Get/Delete)
+- TTL and expiration behavior
+- HTTP API endpoints
+- Concurrent access patterns
+- Edge cases and error conditions
 
-  ```bash
-  go test -v
-  ```
+Benchmarks measure performance of:
 
-- **Run benchmarks**:
+- Single-operation performance (Set/Get/Delete)
+- Parallel operations
+- High-contention scenarios
+- Memory pressure and eviction
+- Multi-bucket usage
 
-  ```bash
-  go test -bench=. -benchmem
-  ```
-  
-  The `-benchmem` flag provides memory allocation statistics which can help with optimization efforts.
+Run tests with:
+```bash
+go test -v
+```
 
-You can also combine specific flags, e.g. `-run` to limit which tests are run, or `-benchtime` to adjust the benchmarking time.
+Run benchmarks with:
+```bash
+go test -bench=. -benchmem
+```
+
+Sample benchmark results might look like:
+```
+BenchmarkSet-8                     1000000    1234 ns/op    123 B/op    2 allocs/op
+BenchmarkGet-8                     2000000     567 ns/op     32 B/op    1 allocs/op
+BenchmarkParallelSetGet-8          500000    2345 ns/op    234 B/op    3 allocs/op
+// ... etc
+```
+
+The `-benchmem` flag shows memory allocation statistics to help with optimization:
+- ns/op: Nanoseconds per operation
+- B/op: Bytes allocated per operation
+- allocs/op: Number of heap allocations per operation
 
 ---
 
