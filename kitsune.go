@@ -445,6 +445,16 @@ func main() {
 	cache := NewCacheSystem(*maxEntrySizeFlag, *maxSizeFlag, *ttlFlag, *cleanupFlag)
 	defer cache.Stop() // Cleanly stop background goroutine when the server exits
 
+	// Log configuration information
+	log.Printf("Configuration:")
+	log.Printf("  Host: %s", *hostFlag)
+	log.Printf("  Port: %d", *portFlag)
+	log.Printf("  Max Entry Size: %d bytes", *maxEntrySizeFlag)
+	log.Printf("  Max Total Cache Size: %d bytes", *maxSizeFlag)
+	log.Printf("  TTL: %d seconds", *ttlFlag)
+	log.Printf("  Cleanup Interval: %d seconds", *cleanupFlag)
+	log.Printf("  Default Keyspace: %s", *defaultKeyspaceFlag)
+
 	handler := createHandler(cache, *defaultKeyspaceFlag)
 
 	addr := fmt.Sprintf("%s:%d", *hostFlag, *portFlag)
