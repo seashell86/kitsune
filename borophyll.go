@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// --- Defaults (mirroring the Python code) ---
+// --- Defaults ---
 const (
 	DEFAULT_TTL              = 60 * 60
 	DEFAULT_MAX_ENTRY_SIZE   = math.MaxInt64
@@ -305,6 +305,7 @@ func createHandler(cache *CacheSystem, defaultKeyspace string) http.Handler {
 	// Health check: GET /
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/" {
+			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
 		} else {
 			http.NotFound(w, r)
@@ -320,6 +321,7 @@ func createHandler(cache *CacheSystem, defaultKeyspace string) http.Handler {
 		key := r.URL.Path[len("/keys/"):]
 		switch r.Method {
 		case http.MethodGet:
+			w.Header().Set("Content-Type", "application/json")
 			val := cache.Get(defaultKeyspace, key)
 			_ = json.NewEncoder(w).Encode(map[string]string{"value": val})
 		case http.MethodPut:
@@ -380,6 +382,7 @@ func createHandler(cache *CacheSystem, defaultKeyspace string) http.Handler {
 			bucket = path
 			switch r.Method {
 			case http.MethodGet:
+				w.Header().Set("Content-Type", "application/json")
 				count := cache.GetBucketSize(bucket)
 				_ = json.NewEncoder(w).Encode(map[string]int{"count": count})
 			case http.MethodDelete:
@@ -396,6 +399,7 @@ func createHandler(cache *CacheSystem, defaultKeyspace string) http.Handler {
 
 		switch r.Method {
 		case http.MethodGet:
+			w.Header().Set("Content-Type", "application/json")
 			val := cache.Get(bucket, key)
 			_ = json.NewEncoder(w).Encode(map[string]string{"value": val})
 		case http.MethodPut:
