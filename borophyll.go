@@ -8,8 +8,6 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -26,22 +24,6 @@ var cacheEntryPool = sync.Pool{
 	New: func() interface{} {
 		return new(CacheEntry)
 	},
-}
-
-// Utility to get environment variables with fallback
-func getEnv(key string, fallback string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
-	}
-	return fallback
-}
-func getEnvInt(key string, fallback int64) int64 {
-	if val := os.Getenv(key); val != "" {
-		if num, err := strconv.ParseInt(val, 10, 64); err == nil {
-			return num
-		}
-	}
-	return fallback
 }
 
 // CacheEntry holds an individual item in the cache.
@@ -450,29 +432,15 @@ func createHandler(cache *CacheSystem, defaultKeyspace string) http.Handler {
 }
 
 func main() {
-	// Environment-based defaults
-	envLogLevel := getEnv("BOROPHYLL_LOG_LEVEL", "INFO")
-	envHost := getEnv("BOROPHYLL_HOST", "0.0.0.0")
-	envPort := getEnvInt("BOROPHYLL_PORT", 42069)
-	envMaxEntrySize := getEnvInt("BOROPHYLL_MAX_ENTRY_SIZE", DEFAULT_MAX_ENTRY_SIZE)
-	envMaxSize := getEnvInt("BOROPHYLL_MAX_SIZE", DEFAULT_MAX_SIZE)
-	envTTL := getEnvInt("BOROPHYLL_TTL", DEFAULT_TTL)
-	envCleanup := getEnvInt("BOROPHYLL_CLEANUP_INTERVAL", DEFAULT_CLEANUP_INTERVAL)
-	envDefaultKeyspace := getEnv("BOROPHYLL_DEFAULT_KEYSPACE", DEFAULT_KEYSPACE)
-
-	// Command-line flags
-	logLevelFlag := flag.String("log-level", envLogLevel, "Log level")
-	hostFlag := flag.String("host", envHost, "Host to bind")
-	portFlag := flag.Int64("port", envPort, "Port to bind")
-	maxEntrySizeFlag := flag.Int64("max-entry-size", envMaxEntrySize, "Max entry size (bytes)")
-	maxSizeFlag := flag.Int64("max-size", envMaxSize, "Max total cache size (bytes)")
-	ttlFlag := flag.Int64("ttl", envTTL, "Default TTL in seconds")
-	cleanupFlag := flag.Int64("cleanup-interval", envCleanup, "Cleanup interval in seconds")
-	defaultKeyspaceFlag := flag.String("default-keyspace", envDefaultKeyspace, "Default keyspace")
+	// Remove environment variable defaults and simplify to just flags
+	hostFlag := flag.String("host", "0.0.0.0", "Host to bind")
+	portFlag := flag.Int64("port", 42069, "Port to bind")
+	maxEntrySizeFlag := flag.Int64("max-entry-size", DEFAULT_MAX_ENTRY_SIZE, "Max entry size (bytes)")
+	maxSizeFlag := flag.Int64("max-size", DEFAULT_MAX_SIZE, "Max total cache size (bytes)")
+	ttlFlag := flag.Int64("ttl", DEFAULT_TTL, "Default TTL in seconds")
+	cleanupFlag := flag.Int64("cleanup-interval", DEFAULT_CLEANUP_INTERVAL, "Cleanup interval in seconds")
+	defaultKeyspaceFlag := flag.String("default-keyspace", DEFAULT_KEYSPACE, "Default keyspace")
 	flag.Parse()
-
-	// Optional: set log flags or handle log level more granularly
-	log.Printf("Log level: %s\n", *logLevelFlag)
 
 	cache := NewCacheSystem(*maxEntrySizeFlag, *maxSizeFlag, *ttlFlag, *cleanupFlag)
 	defer cache.Stop() // Cleanly stop background goroutine when the server exits
