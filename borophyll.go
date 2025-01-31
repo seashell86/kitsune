@@ -22,6 +22,12 @@ const (
 	DEFAULT_KEYSPACE         = "__root__"
 )
 
+var cacheEntryPool = sync.Pool{
+	New: func() interface{} {
+		return new(CacheEntry)
+	},
+}
+
 // Utility to get environment variables with fallback
 func getEnv(key string, fallback string) string {
 	if val := os.Getenv(key); val != "" {
@@ -50,6 +56,15 @@ type CacheEntry struct {
 // IsExpired returns true if the entry is beyond its Expiration.
 func (ce *CacheEntry) IsExpired() bool {
 	return time.Now().After(ce.Expiration)
+}
+
+// reset clears the CacheEntry fields so they can be reused safely.
+func (ce *CacheEntry) reset() {
+	ce.Bucket = ""
+	ce.Key = ""
+	ce.Value = ""
+	ce.Size = 0
+	ce.Expiration = time.Time{}
 }
 
 // CacheSystem manages all in-memory buckets and entries.
@@ -165,6 +180,10 @@ func (cs *CacheSystem) removeElement(elem *list.Element) {
 			delete(cs.buckets, entry.Bucket)
 		}
 	}
+
+	// Wipe fields, then return the entry to the pool.
+	entry.reset()
+	cacheEntryPool.Put(entry)
 }
 
 // Get returns the value from the cache if present and not expired.
@@ -208,18 +227,20 @@ func (cs *CacheSystem) Set(bucket, key, value string) {
 		cs.removeElement(elem)
 	}
 
-	entry := &CacheEntry{
-		Bucket:     bucket,
-		Key:        key,
-		Value:      value,
-		Expiration: time.Now().Add(cs.ttl),
-	}
-	// Approximate size: sum of byte lengths
+	// Instead of creating a new CacheEntry, grab one from the pool.
+	entry := cacheEntryPool.Get().(*CacheEntry)
+	// Fill in the new data
+	entry.Bucket = bucket
+	entry.Key = key
+	entry.Value = value
+	entry.Expiration = time.Now().Add(cs.ttl)
 	entry.Size = len(bucket) + len(key) + len(value)
 
-	// Changed: Compare just the value size against maxEntrySize
+	// Compare just the value size to maxEntrySize
 	if int64(len(value)) > cs.maxEntrySize {
-		// Too large to store at all
+		// Return entry to pool and exit (too large)
+		entry.reset()
+		cacheEntryPool.Put(entry)
 		return
 	}
 
@@ -275,7 +296,17 @@ func (cs *CacheSystem) ClearAll() {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	cs.entries.Init() // drop entire list
+	// We need to move through the list and return each entry to the pool
+	for e := cs.entries.Front(); e != nil; {
+		next := e.Next()
+		entry := e.Value.(*CacheEntry)
+		cs.entries.Remove(e)
+		delete(cs.items, [2]string{entry.Bucket, entry.Key})
+		entry.reset()
+		cacheEntryPool.Put(entry)
+		e = next
+	}
+
 	cs.items = make(map[[2]string]*list.Element)
 	cs.buckets = make(map[string]map[string]struct{})
 	cs.currentSize = 0
@@ -291,8 +322,6 @@ func (cs *CacheSystem) GetBucketSize(bucket string) int {
 	}
 	return 0
 }
-
-// ---------- HTTP Handler (mirroring the FastAPI endpoints) ----------
 
 type putBucketKeyRequest struct {
 	Value string `json:"value"`
