@@ -1,3 +1,3 @@
-module github.com/seashell86/borophyll
+module github.com/seashell86/kitsune
 
 go 1.23

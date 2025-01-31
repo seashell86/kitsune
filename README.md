@@ -1,8 +1,8 @@
-# Borophyll - A Lightweight In-Memory Cache Server in Go
+# Kitsune - A Lightweight In-Memory Cache Server in Go
 
-![Borophyll Logo](./cover.webp)
+![Kitsune Logo](./cover.webp)
 
-Borophyll is a simple, in-memory caching server written in Go. It supports multiple buckets (namespaces), basic LRU eviction to enforce a maximum cache size, per-entry TTL (time-to-live), and a straightforward HTTP API for storing and retrieving values.
+Kitsune is a simple, in-memory caching server written in Go. It supports multiple buckets (namespaces), basic LRU eviction to enforce a maximum cache size, per-entry TTL (time-to-live), and a straightforward HTTP API for storing and retrieving values.
 
 ## Table of Contents
 
@@ -37,18 +37,18 @@ Borophyll is a simple, in-memory caching server written in Go. It supports multi
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/seashell86/borophyll.git
-   cd borophyll
+   git clone https://github.com/seashell86/kitsune.git
+   cd kitsune
    ```
 
 2. **Build**:
    ```bash
-   go build -o borophyll main.go
+   go build -o kitsune main.go
    ```
 
 3. **Run**:
    ```bash
-   ./borophyll
+   ./kitsune
    ```
    (See [Running the Server](#running-the-server) below for details on configuration.)
 
@@ -56,7 +56,7 @@ Borophyll is a simple, in-memory caching server written in Go. It supports multi
 
 ## Configuration
 
-You can configure Borophyll using command-line flags. Below are the available configuration options.
+You can configure Kitsune using command-line flags. Below are the available configuration options.
 
 ### Command-Line Flags
 
@@ -177,21 +177,21 @@ go run main.go
 Or, build and run the generated binary:
 
 ```bash
-go build -o borophyll main.go
-./borophyll
+go build -o kitsune main.go
+./kitsune
 ```
 
 You can override default settings using flags:
 
 ```bash
-./borophyll --host 127.0.0.1 --port 8080 --ttl 120 --cleanup-interval 30
+./kitsune --host 127.0.0.1 --port 8080 --ttl 120 --cleanup-interval 30
 ```
 
 ---
 
 ## Testing and Benchmarks
 
-The project includes comprehensive tests and benchmarks in `borophyll_test.go`. The test suite covers:
+The project includes comprehensive tests and benchmarks in `kitsune_test.go`. The test suite covers:
 
 - Basic cache operations (Set/Get/Delete)
 - TTL and expiration behavior

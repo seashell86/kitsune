@@ -42,7 +42,7 @@ func TestCacheSystem_BasicOperations(t *testing.T) {
 		t.Fatalf("expected 'baz' after overwrite, got %q", val)
 	}
 
-	// Delete the key, ensure it’s gone
+	// Delete the key, ensure it's gone
 	deletedVal := cache.Delete("default", "foo")
 	if deletedVal != "baz" {
 		t.Fatalf("expected 'baz' from Delete, got %q", deletedVal)
@@ -103,7 +103,7 @@ func TestCacheSystem_MaxTotalSize(t *testing.T) {
 	cache.Set("b", "k2", "abcdefghij") // also ~14 bytes
 	cache.Set("b", "k3", "K333333333") // also ~14 bytes
 
-	// We have 3 entries, each ~14 bytes => total ~42 bytes. That’s < 50, so probably all still there.
+	// We have 3 entries, each ~14 bytes => total ~42 bytes. That's < 50, so probably all still there.
 	val1 := cache.Get("b", "k1")
 	val2 := cache.Get("b", "k2")
 	val3 := cache.Get("b", "k3")
@@ -230,7 +230,7 @@ func TestCacheSystem_LazyExpirationOnGet(t *testing.T) {
 		t.Fatalf("expected empty due to lazy expiration, got %q", val)
 	}
 
-	// Confirm it’s truly gone
+	// Confirm it's truly gone
 	if val2 := cache.Get("b", "k"); val2 != "" {
 		t.Fatalf("expected empty on subsequent get, got %q", val2)
 	}
