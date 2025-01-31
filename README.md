@@ -70,8 +70,6 @@ You can configure Kitsune using command-line flags. Below are the available conf
 | `--cleanup-interval`   | `300`          | Cleanup interval in seconds.                  |
 | `--default-keyspace`   | `__root__`     | Default bucket/namespace name.                |
 
-> **Note**: If both an environment variable and a command-line flag are provided for a setting, **the flag value** is used.
-
 ---
 
 ## HTTP Endpoints
